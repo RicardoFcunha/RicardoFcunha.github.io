@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Controle de Relés</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      margin-top: 50px;
+    }
+    h1 {
+      color: #333;
+    }
+    button {
+      padding: 10px 20px;
+      font-size: 16px;
+      margin: 10px;
+      cursor: pointer;
+      border: none;
+      border-radius: 5px;
+      background-color: #007BFF;
+      color: white;
+    }
+    button:hover {
+      background-color: #0056b3;
+    }
+    .status {
+      margin-top: 20px;
+      font-size: 18px;
+    }
+    .loading {
+      display: none;
+      margin-top: 20px;
+      font-size: 18px;
+      color: #007BFF;
+    }
+  </style>
+  <script>
+    const apiKey = "VQ9EFXSBD7LHERF4"; // Substitua pela sua Write API Key
+
+    function enviarComando(rele, estado) {
+      const url = `https://api.thingspeak.com/update?api_key=${apiKey}&field${rele}=${estado}`;
+
+      // Exibe o ícone de carregamento
+      document.getElementById(`loading${rele}`).style.display = "block";
+
+      fetch(url)
+        .then(response => response.text())
+        .then(data => {
+          // Atualiza o status
+          const statusElement = document.getElementById(`status${rele}`);
+          statusElement.textContent = `Rele ${rele} ${estado == 1 ? 'ligado' : 'desligado'}`;
+          statusElement.style.color = estado == 1 ? 'green' : 'red';
+
+          // Oculta o ícone de carregamento
+          document.getElementById(`loading${rele}`).style.display = "none";
+        })
+        .catch(error => {
+          alert("Erro ao enviar comando.");
+          document.getElementById(`loading${rele}`).style.display = "none";
+        });
+    }
+  </script>
+</head>
+<body>
+  <h1>Controle de Relés</h1>
+  
+  <div>
+    <button onclick="enviarComando(1, 1)">Ligar Rele 1</button>
+    <button onclick="enviarComando(1, 0)">Desligar Rele 1</button>
+    <div id="status1" class="status">Estado do Rele 1: Desconhecido</div>
+    <div id="loading1" class="loading">Carregando...</div>
+  </div>
+
+  <div>
+    <button onclick="enviarComando(2, 1)">Ligar Rele 2</button>
+    <button onclick="enviarComando(2, 0)">Desligar Rele 2</button>
+    <div id="status2" class="status">Estado do Rele 2: Desconhecido</div>
+    <div id="loading2" class="loading">Carregando...</div>
+  </div>
+</body>
+</html>
