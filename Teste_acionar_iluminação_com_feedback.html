@@ -21,6 +21,10 @@
       background-color: #007BFF;
       color: white;
     }
+    button:disabled {
+      background-color: #cccccc;
+      cursor: not-allowed;
+    }
     button:hover {
       background-color: #0056b3;
     }
@@ -37,29 +41,54 @@
   </style>
   <script>
     const apiKey = "VQ9EFXSBD7LHERF4"; // Substitua pela sua Write API Key
+    const channelID = 1234567; // Substitua pelo ID do seu canal
 
     function enviarComando(rele, estado) {
       const url = `https://api.thingspeak.com/update?api_key=${apiKey}&field${rele}=${estado}`;
+      const buttons = document.querySelectorAll(`button[onclick*="enviarComando(${rele},"]`);
 
-      // Exibe o ícone de carregamento
+      buttons.forEach(button => button.disabled = true);
       document.getElementById(`loading${rele}`).style.display = "block";
 
       fetch(url)
         .then(response => response.text())
         .then(data => {
-          // Atualiza o status
           const statusElement = document.getElementById(`status${rele}`);
           statusElement.textContent = `Rele ${rele} ${estado == 1 ? 'ligado' : 'desligado'}`;
           statusElement.style.color = estado == 1 ? 'green' : 'red';
 
-          // Oculta o ícone de carregamento
           document.getElementById(`loading${rele}`).style.display = "none";
+          buttons.forEach(button => button.disabled = false);
         })
         .catch(error => {
-          alert("Erro ao enviar comando.");
+          alert("Erro ao enviar comando. Verifique sua conexão com a internet.");
           document.getElementById(`loading${rele}`).style.display = "none";
+          buttons.forEach(button => button.disabled = false);
+          console.error("Erro:", error);
         });
     }
+
+    function verificarEstadoInicial() {
+      const url = `https://api.thingspeak.com/channels/${channelID}/fields/1,2.json?api_key=${apiKey}&results=1`;
+
+      fetch(url)
+        .then(response => response.json())
+        .then(data => {
+          const field1 = data.feeds[0].field1;
+          const field2 = data.feeds[0].field2;
+
+          document.getElementById("status1").textContent = `Estado do Rele 1: ${field1 == 1 ? 'Ligado' : 'Desligado'}`;
+          document.getElementById("status1").style.color = field1 == 1 ? 'green' : 'red';
+
+          document.getElementById("status2").textContent = `Estado do Rele 2: ${field2 == 1 ? 'Ligado' : 'Desligado'}`;
+          document.getElementById("status2").style.color = field2 == 1 ? 'green' : 'red';
+        })
+        .catch(error => {
+          console.error("Erro ao verificar estado inicial:", error);
+        });
+    }
+
+    window.onload = verificarEstadoInicial;
   </script>
 </head>
 <body>
@@ -67,7 +96,7 @@
   
   <div>
     <button onclick="enviarComando(1, 1)">Abrir Portão</button>
-    <button onclick="enviarComando(1, 0)">Ferchar Portão</button>
+    <button onclick="enviarComando(1, 0)">Fechar Portão</button>
     <div id="status1" class="status">Estado do Rele 1: Desconhecido</div>
     <div id="loading1" class="loading">Carregando...</div>
   </div>
