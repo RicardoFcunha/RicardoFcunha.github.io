@@ -68,6 +68,21 @@
         });
     }
 
+    function fecharPortao() {
+      // Desliga o relé 1
+      enviarComando(1, 0);
+
+      // Aguarda 2 segundos e liga o relé 1
+      setTimeout(() => {
+        enviarComando(1, 1);
+
+        // Aguarda mais 2 segundos e desliga o relé 1 novamente
+        setTimeout(() => {
+          enviarComando(1, 0);
+        }, 2000);
+      }, 2000);
+    }
+
     function verificarEstadoInicial() {
       const url = `https://api.thingspeak.com/channels/${channelID}/fields/1,2.json?api_key=${apiKey}&results=1`;
 
@@ -96,7 +111,7 @@
   
   <div>
     <button onclick="enviarComando(1, 1)">Abrir Portão</button>
-    <button onclick="enviarComando(1, 0)">Fechar Portão</button>
+    <button onclick="fecharPortao()">Fechar Portão</button>
     <div id="status1" class="status">Estado do Rele 1: Desconhecido</div>
     <div id="loading1" class="loading">Carregando...</div>
   </div>
