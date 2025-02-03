@@ -67,48 +67,6 @@
           console.error("Erro:", error);
         });
     }
-
-    function fecharPortao() {
-      console.log("Iniciando sequência de fechamento do portão...");
-
-      // Desliga o relé 1
-      enviarComando(1, 0);
-      console.log("Rele 1 desligado.");
-
-      // Aguarda 5 segundos e liga o relé 1
-      setTimeout(() => {
-        console.log("Aguardou 5 segundos. Ligando Rele 1...");
-        enviarComando(1, 1);
-
-        // Aguarda mais 5 segundos e desliga o relé 1 novamente
-        setTimeout(() => {
-          console.log("Aguardou mais 5 segundos. Desligando Rele 1...");
-          enviarComando(1, 0);
-        }, 12000); // 5000 milissegundos = 5 segundos
-      }, 12000); // 5000 milissegundos = 5 segundos
-    }
-
-    function verificarEstadoInicial() {
-      const url = `https://api.thingspeak.com/channels/${channelID}/fields/1,2.json?api_key=${apiKey}&results=1`;
-
-      fetch(url)
-        .then(response => response.json())
-        .then(data => {
-          const field1 = data.feeds[0].field1;
-          const field2 = data.feeds[0].field2;
-
-          document.getElementById("status1").textContent = `Estado do Rele 1: ${field1 == 1 ? 'Ligado' : 'Desligado'}`;
-          document.getElementById("status1").style.color = field1 == 1 ? 'green' : 'red';
-
-          document.getElementById("status2").textContent = `Estado do Rele 2: ${field2 == 1 ? 'Ligado' : 'Desligado'}`;
-          document.getElementById("status2").style.color = field2 == 1 ? 'green' : 'red';
-        })
-        .catch(error => {
-          console.error("Erro ao verificar estado inicial:", error);
-        });
-    }
-
-    window.onload = verificarEstadoInicial;
   </script>
 </head>
 <body>
@@ -116,16 +74,9 @@
   
   <div>
     <button onclick="enviarComando(1, 1)">Abrir Portão</button>
-    <button onclick="fecharPortao()">Fechar Portão</button>
+    <button onclick="enviarComando(2, 1)">Fechar Portão</button>
     <div id="status1" class="status">Estado do Rele 1: Desconhecido</div>
     <div id="loading1" class="loading">Carregando...</div>
-  </div>
-
-  <div>
-    <button onclick="enviarComando(2, 1)">Ligar Luz Portão</button>
-    <button onclick="enviarComando(2, 0)">Desligar Luz Portão</button>
-    <div id="status2" class="status">Estado do Rele 2: Desconhecido</div>
-    <div id="loading2" class="loading">Carregando...</div>
   </div>
 </body>
 </html>
