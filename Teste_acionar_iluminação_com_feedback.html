@@ -38,9 +38,10 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.min.js"></script>
   <script>
     const clientId = "web_" + parseInt(Math.random() * 100000);
-    const host = "192.168.5.23"; // Mesmo IP do broker
+    const host = "192.168.5.23"; // IP do broker Mosquitto
     const port = 9001; // Porta WebSocket
-    const topic = "casa/luz"; // Tópico MQTT
+    const topicPortao = "casa/portao"; // Tópico para o portão
+    const topicLuz = "casa/luz"; // Tópico para a luz
     
     let client = null;
 
@@ -52,25 +53,46 @@
       
       client.connect({
         onSuccess: onConnect,
+        onFailure: onFailure,
         useSSL: false
       });
     }
 
     function onConnect() {
       console.log("Conectado ao broker MQTT");
-      client.subscribe(topic);
+      client.subscribe(topicPortao);
+      client.subscribe(topicLuz);
+      updateStatus("Conectado ao broker", "green");
+    }
+
+    function onFailure(response) {
+      console.log("Falha na conexão: " + response.errorMessage);
+      updateStatus("Falha na conexão: " + response.errorMessage, "red");
+      setTimeout(connect, 5000);
     }
 
     function onConnectionLost(responseObject) {
       if (responseObject.errorCode !== 0) {
         console.log("Conexão perdida: " + responseObject.errorMessage);
-        setTimeout(connect, 5000); // Tentar reconectar após 5 segundos
+        updateStatus("Conexão perdida", "red");
+        setTimeout(connect, 5000);
       }
     }
 
     function onMessageArrived(message) {
-      console.log("Mensagem recebida: " + message.payloadString);
-      // Aqui você pode atualizar a interface com o estado atual
+      console.log("Mensagem recebida no tópico " + message.destinationName + ": " + message.payloadString);
+      const rele = message.destinationName === topicPortao ? 1 : 2;
+      const estado = message.payloadString === "ligar" ? 1 : 0;
+      
+      const statusElement = document.getElementById(`status${rele}`);
+      statusElement.textContent = `Rele ${rele} ${estado == 1 ? 'ligado' : 'desligado'}`;
+      statusElement.style.color = estado == 1 ? 'green' : 'red';
+    }
+
+    function updateStatus(text, color) {
+      const statusElement = document.getElementById("connectionStatus");
+      statusElement.textContent = text;
+      statusElement.style.color = color;
     }
 
     function enviarComando(rele, estado) {
@@ -79,6 +101,7 @@
         return;
       }
 
+      const topic = rele === 1 ? topicPortao : topicLuz;
       const message = new Paho.MQTT.Message(estado === 1 ? "ligar" : "desligar");
       message.destinationName = topic;
       message.qos = 1;
@@ -87,10 +110,6 @@
       
       client.send(message);
       
-      // Atualiza o status (simplificado - idealmente deveria esperar confirmação)
-      const statusElement = document.getElementById(`status${rele}`);
-      statusElement.textContent = `Rele ${rele} ${estado == 1 ? 'ligado' : 'desligado'}`;
-      statusElement.style.color = estado == 1 ? 'green' : 'red';
       document.getElementById(`loading${rele}`).style.display = "none";
     }
 
@@ -100,18 +119,19 @@
 </head>
 <body>
   <h1>Controle Iluminação Portão via MQTT</h1>
+  <div id="connectionStatus" class="status">Conectando ao broker...</div>
   
   <div>
     <button onclick="enviarComando(1, 1)">Abrir Portão</button>
     <button onclick="enviarComando(1, 0)">Fechar Portão</button>
-    <div id="status1" class="status">Estado do Rele 1: Desconhecido</div>
+    <div id="status1" class="status">Estado do Portão: Desconhecido</div>
     <div id="loading1" class="loading">Carregando...</div>
   </div>
 
   <div>
     <button onclick="enviarComando(2, 1)">Ligar Luz Portão</button>
     <button onclick="enviarComando(2, 0)">Desligar Luz Portão</button>
-    <div id="status2" class="status">Estado do Rele 2: Desconhecido</div>
+    <div id="status2" class="status">Estado da Luz: Desconhecido</div>
     <div id="loading2" class="loading">Carregando...</div>
   </div>
 </body>
