@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Controle de Iluminação/Portão</title>
+  <title>Controle de Iluminação/Portão via MQTT</title>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -35,39 +35,75 @@
       color: #007BFF;
     }
   </style>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.min.js"></script>
   <script>
-    const apiKey = "VQ9EFXSBD7LHERF4"; // Substitua pela sua Write API Key
+    const clientId = "web_" + parseInt(Math.random() * 100000);
+    const host = "192.168.5.23"; // Mesmo IP do broker
+    const port = 9001; // Porta WebSocket
+    const topic = "casa/luz"; // Tópico MQTT
+    
+    let client = null;
+
+    function connect() {
+      client = new Paho.MQTT.Client(host, port, clientId);
+      
+      client.onConnectionLost = onConnectionLost;
+      client.onMessageArrived = onMessageArrived;
+      
+      client.connect({
+        onSuccess: onConnect,
+        useSSL: false
+      });
+    }
+
+    function onConnect() {
+      console.log("Conectado ao broker MQTT");
+      client.subscribe(topic);
+    }
+
+    function onConnectionLost(responseObject) {
+      if (responseObject.errorCode !== 0) {
+        console.log("Conexão perdida: " + responseObject.errorMessage);
+        setTimeout(connect, 5000); // Tentar reconectar após 5 segundos
+      }
+    }
+
+    function onMessageArrived(message) {
+      console.log("Mensagem recebida: " + message.payloadString);
+      // Aqui você pode atualizar a interface com o estado atual
+    }
 
     function enviarComando(rele, estado) {
-      const url = `https://api.thingspeak.com/update?api_key=${apiKey}&field${rele}=${estado}`;
+      if (!client || !client.isConnected()) {
+        alert("Não conectado ao broker MQTT");
+        return;
+      }
 
-      // Exibe o ícone de carregamento
+      const message = new Paho.MQTT.Message(estado === 1 ? "ligar" : "desligar");
+      message.destinationName = topic;
+      message.qos = 1;
+      
       document.getElementById(`loading${rele}`).style.display = "block";
-
-      fetch(url)
-        .then(response => response.text())
-        .then(data => {
-          // Atualiza o status
-          const statusElement = document.getElementById(`status${rele}`);
-          statusElement.textContent = `Rele ${rele} ${estado == 1 ? 'ligado' : 'desligado'}`;
-          statusElement.style.color = estado == 1 ? 'green' : 'red';
-
-          // Oculta o ícone de carregamento
-          document.getElementById(`loading${rele}`).style.display = "none";
-        })
-        .catch(error => {
-          alert("Erro ao enviar comando.");
-          document.getElementById(`loading${rele}`).style.display = "none";
-        });
+      
+      client.send(message);
+      
+      // Atualiza o status (simplificado - idealmente deveria esperar confirmação)
+      const statusElement = document.getElementById(`status${rele}`);
+      statusElement.textContent = `Rele ${rele} ${estado == 1 ? 'ligado' : 'desligado'}`;
+      statusElement.style.color = estado == 1 ? 'green' : 'red';
+      document.getElementById(`loading${rele}`).style.display = "none";
     }
+
+    // Conectar quando a página carregar
+    window.onload = connect;
   </script>
 </head>
 <body>
-  <h1>Controle Iluminação Portão</h1>
+  <h1>Controle Iluminação Portão via MQTT</h1>
   
   <div>
     <button onclick="enviarComando(1, 1)">Abrir Portão</button>
-    <button onclick="enviarComando(1, 0)">Ferchar Portão</button>
+    <button onclick="enviarComando(1, 0)">Fechar Portão</button>
     <div id="status1" class="status">Estado do Rele 1: Desconhecido</div>
     <div id="loading1" class="loading">Carregando...</div>
   </div>
