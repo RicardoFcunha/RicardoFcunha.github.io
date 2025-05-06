@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Controle de Iluminação/Portão via MQTT</title>
+  <title>Controle de Iluminação/Portão</title>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -35,103 +35,47 @@
       color: #007BFF;
     }
   </style>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.min.js"></script>
   <script>
-    const clientId = "web_" + parseInt(Math.random() * 100000);
-    const host = "192.168.5.23"; // IP do broker Mosquitto
-    const port = 9001; // Porta WebSocket
-    const topicPortao = "casa/portao"; // Tópico para o portão
-    const topicLuz = "casa/luz"; // Tópico para a luz
-    
-    let client = null;
-
-    function connect() {
-      client = new Paho.MQTT.Client(host, port, clientId);
-      
-      client.onConnectionLost = onConnectionLost;
-      client.onMessageArrived = onMessageArrived;
-      
-      client.connect({
-        onSuccess: onConnect,
-        onFailure: onFailure,
-        useSSL: false
-      });
-    }
-
-    function onConnect() {
-      console.log("Conectado ao broker MQTT");
-      client.subscribe(topicPortao);
-      client.subscribe(topicLuz);
-      updateStatus("Conectado ao broker", "green");
-    }
-
-    function onFailure(response) {
-      console.log("Falha na conexão: " + response.errorMessage);
-      updateStatus("Falha na conexão: " + response.errorMessage, "red");
-      setTimeout(connect, 5000);
-    }
-
-    function onConnectionLost(responseObject) {
-      if (responseObject.errorCode !== 0) {
-        console.log("Conexão perdida: " + responseObject.errorMessage);
-        updateStatus("Conexão perdida", "red");
-        setTimeout(connect, 5000);
-      }
-    }
-
-    function onMessageArrived(message) {
-      console.log("Mensagem recebida no tópico " + message.destinationName + ": " + message.payloadString);
-      const rele = message.destinationName === topicPortao ? 1 : 2;
-      const estado = message.payloadString === "ligar" ? 1 : 0;
-      
-      const statusElement = document.getElementById(`status${rele}`);
-      statusElement.textContent = `Rele ${rele} ${estado == 1 ? 'ligado' : 'desligado'}`;
-      statusElement.style.color = estado == 1 ? 'green' : 'red';
-    }
-
-    function updateStatus(text, color) {
-      const statusElement = document.getElementById("connectionStatus");
-      statusElement.textContent = text;
-      statusElement.style.color = color;
-    }
+    const apiKey = "VQ9EFXSBD7LHERF4"; // Substitua pela sua Write API Key
 
     function enviarComando(rele, estado) {
-      if (!client || !client.isConnected()) {
-        alert("Não conectado ao broker MQTT");
-        return;
-      }
+      const url = `https://api.thingspeak.com/update?api_key=${apiKey}&field${rele}=${estado}`;
 
-      const topic = rele === 1 ? topicPortao : topicLuz;
-      const message = new Paho.MQTT.Message(estado === 1 ? "ligar" : "desligar");
-      message.destinationName = topic;
-      message.qos = 1;
-      
+      // Exibe o ícone de carregamento
       document.getElementById(`loading${rele}`).style.display = "block";
-      
-      client.send(message);
-      
-      document.getElementById(`loading${rele}`).style.display = "none";
-    }
 
-    // Conectar quando a página carregar
-    window.onload = connect;
+      fetch(url)
+        .then(response => response.text())
+        .then(data => {
+          // Atualiza o status
+          const statusElement = document.getElementById(`status${rele}`);
+          statusElement.textContent = `Rele ${rele} ${estado == 1 ? 'ligado' : 'desligado'}`;
+          statusElement.style.color = estado == 1 ? 'green' : 'red';
+
+          // Oculta o ícone de carregamento
+          document.getElementById(`loading${rele}`).style.display = "none";
+        })
+        .catch(error => {
+          alert("Erro ao enviar comando.");
+          document.getElementById(`loading${rele}`).style.display = "none";
+        });
+    }
   </script>
 </head>
 <body>
-  <h1>Controle Iluminação Portão via MQTT</h1>
-  <div id="connectionStatus" class="status">Conectando ao broker...</div>
+  <h1>Controle Iluminação Portão</h1>
   
   <div>
     <button onclick="enviarComando(1, 1)">Abrir Portão</button>
-    <button onclick="enviarComando(1, 0)">Fechar Portão</button>
-    <div id="status1" class="status">Estado do Portão: Desconhecido</div>
+    <button onclick="enviarComando(1, 0)">Ferchar Portão</button>
+    <div id="status1" class="status">Estado do Rele 1: Desconhecido</div>
     <div id="loading1" class="loading">Carregando...</div>
   </div>
 
   <div>
     <button onclick="enviarComando(2, 1)">Ligar Luz Portão</button>
     <button onclick="enviarComando(2, 0)">Desligar Luz Portão</button>
-    <div id="status2" class="status">Estado da Luz: Desconhecido</div>
+    <div id="status2" class="status">Estado do Rele 2: Desconhecido</div>
     <div id="loading2" class="loading">Carregando...</div>
   </div>
 </body>
